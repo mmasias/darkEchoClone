@@ -125,6 +125,7 @@ let mouseX = -1, mouseY = -1;
 let targetX = -1, targetY = -1;
 let moveMode = 'walk', stepTimer = 0;
 let susurroCooldown = 0, tosCooldown = 0;
+let slideTimer = 0;
 const cam = {x:0, y:0};
 function updateCamera() {
   cam.x = Math.max(0, Math.min(COLS*CELL - BASE_W, player.x*CELL - BASE_W/2));
@@ -269,7 +270,7 @@ function reset() {
     enemies[i].waypointIdx=0; enemies[i].stepTimer=0; enemies[i].waves=[];
   }
   targetX=-1; targetY=-1;
-  susurroCooldown=0; tosCooldown=0;
+  susurroCooldown=0; tosCooldown=0; slideTimer=0;
   updateCamera();
   setMode('walk');
   updateInstantBtns();
@@ -304,13 +305,21 @@ function update(dt) {
     if(dist>0.15) {
       const spd = moveMode==='stealth'?1.2:moveMode==='run'?4.5:2.8;
       const nx=player.x+(dx/dist)*spd*dt, ny=player.y+(dy/dist)*spd*dt;
-      const moved=tryMove(player,nx,ny)||tryMove(player,player.x,ny)||tryMove(player,nx,player.y);
-      if(moved){
-        stepTimer+=dt;
-        const interval = moveMode==='stealth'?0.8:moveMode==='run'?0.2:0.35;
-        if(stepTimer>=interval){emitWave(moveMode);stepTimer=0;}
-      } else { targetX=-1; targetY=-1; }
-    } else { targetX=-1;targetY=-1; }
+      const directMoved=tryMove(player,nx,ny);
+      const moved=directMoved||tryMove(player,player.x,ny)||tryMove(player,nx,player.y);
+      if(moved) {
+        if(directMoved) {
+          slideTimer=0;
+          stepTimer+=dt;
+          const interval=moveMode==='stealth'?0.8:moveMode==='run'?0.2:0.35;
+          if(stepTimer>=interval){emitWave(moveMode);stepTimer=0;}
+        } else {
+          stepTimer=0;
+          slideTimer+=dt;
+          if(slideTimer>0.8){targetX=-1;targetY=-1;slideTimer=0;}
+        }
+      } else { targetX=-1;targetY=-1;slideTimer=0; }
+    } else { targetX=-1;targetY=-1;slideTimer=0; }
   }
   for(const w of waves){w.age+=dt;for(const r of w.rays)castRay(r,dt);}
   for(let i=waves.length-1;i>=0;i--) if(waves[i].age>waves[i].maxAge) waves.splice(i,1);
