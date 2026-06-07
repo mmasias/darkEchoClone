@@ -36,6 +36,7 @@ canvas { display: block; image-rendering: pixelated; border: 1px solid rgba(255,
   <div id="ui-actions">
     <button class="instant-btn" id="btn-susurro" onclick="doSusurro()">SUSURRO</button>
     <button class="instant-btn" id="btn-tos" onclick="doTos()">TOS</button>
+    <button class="instant-btn" id="btn-piedra" onclick="doThrowStone()">PIEDRA</button>
   </div>
 </div>
 <canvas id="c"></canvas>
@@ -124,8 +125,9 @@ let gameOver = false, gameWon = false, lastTime = 0;
 let mouseX = -1, mouseY = -1;
 let targetX = -1, targetY = -1;
 let moveMode = 'walk', stepTimer = 0;
-let susurroCooldown = 0, tosCooldown = 0;
+let susurroCooldown = 0, tosCooldown = 0, stoneCooldown = 0;
 let slideTimer = 0;
+let playerAngle = 0, stone = null;
 const cam = {x:0, y:0};
 function updateCamera() {
   cam.x = Math.max(0, Math.min(COLS*CELL - BASE_W, player.x*CELL - BASE_W/2));
@@ -140,10 +142,13 @@ function setMode(m) {
 function updateInstantBtns() {
   const bs = document.getElementById('btn-susurro');
   const bt = document.getElementById('btn-tos');
+  const bp = document.getElementById('btn-piedra');
   bs.disabled = susurroCooldown > 0;
   bt.disabled = tosCooldown > 0;
+  bp.disabled = stoneCooldown > 0;
   bs.textContent = susurroCooldown > 0 ? `SUSURRO ${susurroCooldown.toFixed(1)}` : 'SUSURRO';
   bt.textContent = tosCooldown > 0 ? `TOS ${tosCooldown.toFixed(1)}` : 'TOS';
+  bp.textContent = stoneCooldown > 0 ? `PIEDRA ${stoneCooldown.toFixed(1)}` : 'PIEDRA';
 }
 function doSusurro() {
   if(gameOver || gameWon || susurroCooldown > 0) return;
@@ -154,6 +159,11 @@ function doTos() {
   if(gameOver || gameWon || tosCooldown > 0) return;
   emitWave('tos');
   tosCooldown = 4;
+}
+function doThrowStone() {
+  if(gameOver || gameWon || stoneCooldown > 0) return;
+  stone = {x:player.x*CELL, y:player.y*CELL, dx:Math.cos(playerAngle), dy:Math.sin(playerAngle), dist:0, maxDist:CELL*12};
+  stoneCooldown = 7;
 }
 
 function cellWalkable(cx, cy) {
@@ -175,18 +185,21 @@ function emitEnemyWave(e, alerted) {
   }
   e.waves.push(w);
 }
-function emitWave(mode) {
+function emitWave(mode, wx, wy) {
   const cfg = {
     stealth: {count:48, maxDist:CELL*4,   maxAge:0.8, loud:false},
     walk:    {count:72, maxDist:CELL*7,   maxAge:1.2, loud:true},
     run:     {count:90, maxDist:CELL*10,  maxAge:1.5, loud:true},
     susurro: {count:36, maxDist:CELL*2.5, maxAge:0.6, loud:false},
     tos:     {count:100,maxDist:CELL*12,  maxAge:1.8, loud:true},
+    stone:   {count:90, maxDist:CELL*10,  maxAge:1.5, loud:true},
   }[mode];
-  const w = {x:player.x*CELL, y:player.y*CELL, rays:[], age:0, maxAge:cfg.maxAge, loud:cfg.loud};
+  const x = wx !== undefined ? wx : player.x*CELL;
+  const y = wy !== undefined ? wy : player.y*CELL;
+  const w = {x, y, rays:[], age:0, maxAge:cfg.maxAge, loud:cfg.loud, isStone:mode==='stone'};
   for(let i=0;i<cfg.count;i++) {
     const a = (i/cfg.count)*Math.PI*2;
-    w.rays.push({x:w.x,y:w.y,dx:Math.cos(a),dy:Math.sin(a),dist:0,maxDist:cfg.maxDist,bounced:false,dead:false,red:false});
+    w.rays.push({x, y, dx:Math.cos(a), dy:Math.sin(a), dist:0, maxDist:cfg.maxDist, bounced:false, dead:false, red:false});
   }
   waves.push(w);
 }
@@ -270,7 +283,8 @@ function reset() {
     enemies[i].waypointIdx=0; enemies[i].stepTimer=0; enemies[i].waves=[];
   }
   targetX=-1; targetY=-1;
-  susurroCooldown=0; tosCooldown=0; slideTimer=0;
+  susurroCooldown=0; tosCooldown=0; stoneCooldown=0; slideTimer=0;
+  playerAngle=0; stone=null;
   updateCamera();
   setMode('walk');
   updateInstantBtns();
@@ -299,6 +313,19 @@ function update(dt) {
   updateCamera();
   if(susurroCooldown > 0) { susurroCooldown = Math.max(0, susurroCooldown - dt); updateInstantBtns(); }
   if(tosCooldown > 0)     { tosCooldown     = Math.max(0, tosCooldown     - dt); updateInstantBtns(); }
+  if(stoneCooldown > 0)   { stoneCooldown   = Math.max(0, stoneCooldown   - dt); updateInstantBtns(); }
+  if(stone) {
+    const step = CELL*12*dt;
+    const nx = stone.x + stone.dx*step;
+    const ny = stone.y + stone.dy*step;
+    stone.dist += step;
+    const cx = Math.floor(nx/CELL), cy = Math.floor(ny/CELL);
+    const hitWall = !(cy>=0&&cy<ROWS&&cx>=0&&cx<COLS&&MAP[cy][cx]!==1);
+    if(hitWall || stone.dist >= stone.maxDist) {
+      emitWave('stone', stone.x, stone.y);
+      stone = null;
+    } else { stone.x=nx; stone.y=ny; }
+  }
   if(targetX>=0) {
     const dx=targetX-player.x, dy=targetY-player.y;
     const dist=Math.sqrt(dx*dx+dy*dy);
@@ -309,6 +336,7 @@ function update(dt) {
       const moved=directMoved||tryMove(player,player.x,ny)||tryMove(player,nx,player.y);
       if(moved) {
         if(directMoved) {
+          playerAngle=Math.atan2(dy,dx);
           slideTimer=0;
           stepTimer+=dt;
           const interval=moveMode==='stealth'?0.8:moveMode==='run'?0.2:0.35;
@@ -355,8 +383,8 @@ function draw() {
       ctx.beginPath();
       ctx.moveTo(tx, ty);
       ctx.lineTo(rx, ry);
-      const hue=r.red?'0':(w.loud?'180':'160');
-      ctx.strokeStyle=`hsla(${hue},${r.red?'100%':'60%'},${r.red?'60%':'55%'},${alpha*(r.red?1:0.7)})`;
+      const hue=r.red?'0':w.isStone?'50':(w.loud?'180':'160');
+      ctx.strokeStyle=`hsla(${hue},${r.red?'100%':'70%'},${r.red?'60%':'60%'},${alpha*(r.red?1:0.7)})`;
       ctx.lineWidth=r.red?1.5:0.8;
       ctx.stroke();
     }
@@ -389,7 +417,18 @@ function draw() {
     ctx.beginPath(); ctx.arc(e.x*CELL-cam.x, e.y*CELL-cam.y, 3, 0, Math.PI*2); ctx.fill();
   }
 
+  if(stone) {
+    ctx.fillStyle='rgba(255,240,150,0.95)';
+    ctx.beginPath(); ctx.arc(stone.x-cam.x, stone.y-cam.y, 2, 0, Math.PI*2); ctx.fill();
+  }
+
   const px=player.x*CELL-cam.x, py=player.y*CELL-cam.y;
+  ctx.strokeStyle='rgba(255,255,255,0.4)';
+  ctx.lineWidth=0.8;
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px+Math.cos(playerAngle)*10, py+Math.sin(playerAngle)*10);
+  ctx.stroke();
   ctx.fillStyle='rgba(255,255,255,0.9)';
   ctx.beginPath(); ctx.arc(px,py,3,0,Math.PI*2); ctx.fill();
 
