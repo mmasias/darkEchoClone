@@ -1,11 +1,12 @@
-# Dark Echo — Prototipo Web v0.2
+# Clon del Dark Echo — Prototipo Web v0.2
+
+Juego de terror y sigilo donde el jugador es invidente y percibe el entorno exclusivamente mediante ondas de sonido visualizadas en pantalla.
+
+> ***[Jugar en el navegador](https://mmasias.github.io/darkEchoClone/dark_echo.html)***
 
 |![](/images/preview.webp)|Clon de inspiración del juego *Dark Echo* (RAC7, 2015).|
 |:-:|:-:|
 
-[Jugar en el navegador](https://mmasias.github.io/darkEchoClone/dark_echo.html)
-
-Juego de terror y sigilo donde el jugador es invidente y percibe el entorno exclusivamente mediante ondas de sonido visualizadas en pantalla.
 
 ## Concepto central
 
