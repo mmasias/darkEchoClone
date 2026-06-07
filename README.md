@@ -1,4 +1,4 @@
-# Clon del Dark Echo — Prototipo Web v0.3
+# Clon del Dark Echo — Prototipo Web v0.4
 
 Juego de terror y sigilo donde el jugador es invidente y percibe el entorno exclusivamente mediante ondas de sonido visualizadas en pantalla.
 
@@ -12,7 +12,7 @@ Juego de terror y sigilo donde el jugador es invidente y percibe el entorno excl
 
 El mismo mecanismo que permite "ver" delata la posición del jugador. Caminar emite ondas amplias que revelan el entorno pero alertan a los enemigos. El sigilo emite ondas tenues que apenas revelan nada. Esta tensión entre información y vulnerabilidad es el núcleo del diseño.
 
-## Estado actual (v0.3)
+## Estado actual (v0.4)
 
 Archivo único: `dark_echo.html` — HTML5/Canvas vanilla, sin dependencias.
 
@@ -28,6 +28,10 @@ Archivo único: `dark_echo.html` — HTML5/Canvas vanilla, sin dependencias.
   - **Caminar** (blanco): 2.8 c/s, 72 rayos, alcance 7 celdas, intervalo 0.35s
   - **Correr** (naranja): 4.5 c/s, 90 rayos, alcance 10 celdas, intervalo 0.2s
   - Movimiento por pathfinding básico: dirección al objetivo con resolución de colisiones por eje
+- **Acciones instantáneas** (sin necesidad de moverse), con cooldown:
+  - **SUSURRO**: onda puntual desde posición actual — 36 rayos, alcance 2.5 celdas, cooldown 0.8s. Para explorar esquinas sin moverse.
+  - **TOS**: onda masiva desde posición actual — 100 rayos, alcance 12 celdas, cooldown 4s. Para crear señuelos y atraer enemigos.
+  - El botón muestra la cuenta atrás mientras recarga (`TOS 3.2`, `TOS 1.0`...)
 - **Sistema de ondas (raycast)**
   - `emitWave(loud)` genera N rayos radiales desde la posición del jugador
   - Cada rayo avanza 2px por iteración a velocidad `CELL * 8` unidades/segundo
@@ -67,6 +71,8 @@ const ROWS = 13;
 // Sigilo:   48 rayos, alcance 4 celdas,  maxAge 0.8s, intervalo 0.8s,  velocidad 1.2 c/s
 // Caminar:  72 rayos, alcance 7 celdas,  maxAge 1.2s, intervalo 0.35s, velocidad 2.8 c/s
 // Correr:   90 rayos, alcance 10 celdas, maxAge 1.5s, intervalo 0.2s,  velocidad 4.5 c/s
+// Susurro:  36 rayos, alcance 2.5 celdas, maxAge 0.6s, cooldown 0.8s  (instantáneo)
+// Tos:     100 rayos, alcance 12 celdas,  maxAge 1.8s, cooldown 4.0s  (instantáneo)
 // Enemigo patrulla: 48 rayos, alcance 4 celdas, maxAge 0.9s, intervalo 0.6s
 // Enemigo alerta:   60 rayos, alcance 5 celdas, maxAge 0.7s, intervalo 0.25s
 // Percepción de enemigos: fade lineal entre 4 celdas (plena) y 7 celdas (nula)
@@ -77,6 +83,7 @@ const ROWS = 13;
 ```
 requestAnimationFrame(loop)
   |-- update(dt)
+  |     |-- tick cooldowns de susurro y tos
   |     |-- mover jugador hacia targetX/targetY
   |     |-- emitWave() según stepTimer
   |     |-- castRay() para cada rayo vivo (jugador)
