@@ -1,4 +1,4 @@
-# Clon del Dark Echo — Prototipo Web v0.5
+# Clon del Dark Echo — Prototipo Web v0.51
 
 Juego de terror y sigilo donde el jugador es invidente y percibe el entorno exclusivamente mediante ondas de sonido visualizadas en pantalla.
 
@@ -12,7 +12,7 @@ Juego de terror y sigilo donde el jugador es invidente y percibe el entorno excl
 
 El mismo mecanismo que permite "ver" delata la posición del jugador. Caminar emite ondas amplias que revelan el entorno pero alertan a los enemigos. El sigilo emite ondas tenues que apenas revelan nada. Esta tensión entre información y vulnerabilidad es el núcleo del diseño.
 
-## Estado actual (v0.5)
+## Estado actual (v0.51)
 
 Archivo único: `dark_echo.html` — HTML5/Canvas vanilla, sin dependencias.
 
@@ -25,7 +25,7 @@ Archivo único: `dark_echo.html` — HTML5/Canvas vanilla, sin dependencias.
   - **Sigilo** (verde): 1.2 c/s, 48 rayos, alcance 4 celdas, intervalo 0.8s
   - **Caminar** (blanco): 2.8 c/s, 72 rayos, alcance 7 celdas, intervalo 0.35s
   - **Correr** (naranja): 4.5 c/s, 90 rayos, alcance 10 celdas, intervalo 0.2s
-  - Si el jugador queda completamente bloqueado por una pared, el destino se cancela automáticamente
+  - Sin ondas durante deslizamiento por pared; destino cancelado tras 0.8s de slide sin avance directo
 - **Acciones instantáneas** (sin necesidad de moverse), con cooldown:
   - **SUSURRO**: onda puntual desde posición actual — 36 rayos, alcance 2.5 celdas, cooldown 0.8s. Para explorar esquinas sin moverse.
   - **TOS**: onda masiva desde posición actual — 100 rayos, alcance 12 celdas, cooldown 4s. Para crear señuelos y atraer enemigos.
