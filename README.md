@@ -1,4 +1,4 @@
-# Clon del Dark Echo — Prototipo Web v0.2
+# Clon del Dark Echo — Prototipo Web v0.3
 
 Juego de terror y sigilo donde el jugador es invidente y percibe el entorno exclusivamente mediante ondas de sonido visualizadas en pantalla.
 
@@ -12,7 +12,7 @@ Juego de terror y sigilo donde el jugador es invidente y percibe el entorno excl
 
 El mismo mecanismo que permite "ver" delata la posición del jugador. Caminar emite ondas amplias que revelan el entorno pero alertan a los enemigos. El sigilo emite ondas tenues que apenas revelan nada. Esta tensión entre información y vulnerabilidad es el núcleo del diseño.
 
-## Estado actual (v0.2)
+## Estado actual (v0.3)
 
 Archivo único: `dark_echo.html` — HTML5/Canvas vanilla, sin dependencias.
 
@@ -23,8 +23,10 @@ Archivo único: `dark_echo.html` — HTML5/Canvas vanilla, sin dependencias.
   - `1` = pared
   - `2` = salida (esquina inferior derecha)
 - **Jugador** representado como punto blanco (radio 3px)
-  - Click -> caminar (ondas amplias, cyan, alcance 7 celdas)
-  - Doble-click -> sigilo (ondas tenues, verde, alcance 4 celdas)
+  - Click para mover; modo seleccionado mediante botones en la cabecera
+  - **Sigilo** (verde): 1.2 c/s, 48 rayos, alcance 4 celdas, intervalo 0.8s
+  - **Caminar** (blanco): 2.8 c/s, 72 rayos, alcance 7 celdas, intervalo 0.35s
+  - **Correr** (naranja): 4.5 c/s, 90 rayos, alcance 10 celdas, intervalo 0.2s
   - Movimiento por pathfinding básico: dirección al objetivo con resolución de colisiones por eje
 - **Sistema de ondas (raycast)**
   - `emitWave(loud)` genera N rayos radiales desde la posición del jugador
@@ -62,10 +64,11 @@ Enemigo 2 (zona inferior): (1,9)  -> (5,9)  -> (5,11) -> (1,11) [bucle rectangul
 const CELL = 48;          // px por celda (versión standalone)
 const COLS = 17;
 const ROWS = 13;
-// Ondas ruidosas del jugador: 72 rayos, alcance 7 celdas, maxAge 1.2s, intervalo 0.35s
-// Ondas sigilosas del jugador: 48 rayos, alcance 4 celdas, maxAge 0.8s, intervalo 0.8s
-// Ondas de enemigo en patrulla: 48 rayos, alcance 4 celdas, maxAge 0.9s, intervalo 0.6s
-// Ondas de enemigo en alerta:   60 rayos, alcance 5 celdas, maxAge 0.7s, intervalo 0.25s
+// Sigilo:   48 rayos, alcance 4 celdas,  maxAge 0.8s, intervalo 0.8s,  velocidad 1.2 c/s
+// Caminar:  72 rayos, alcance 7 celdas,  maxAge 1.2s, intervalo 0.35s, velocidad 2.8 c/s
+// Correr:   90 rayos, alcance 10 celdas, maxAge 1.5s, intervalo 0.2s,  velocidad 4.5 c/s
+// Enemigo patrulla: 48 rayos, alcance 4 celdas, maxAge 0.9s, intervalo 0.6s
+// Enemigo alerta:   60 rayos, alcance 5 celdas, maxAge 0.7s, intervalo 0.25s
 // Percepción de enemigos: fade lineal entre 4 celdas (plena) y 7 celdas (nula)
 ```
 
