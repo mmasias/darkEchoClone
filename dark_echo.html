@@ -8,13 +8,18 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; cursor: none; }
 canvas { display: block; image-rendering: pixelated; border: 1px solid rgba(255,255,255,0.5); }
-#ui { position: fixed; top: 10px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 20px; font-family: monospace; pointer-events: none; }
+#ui { position: fixed; top: 10px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: monospace; pointer-events: none; }
+#ui-top { display: flex; align-items: center; justify-content: center; gap: 20px; }
+#ui-actions { display: flex; align-items: center; justify-content: center; gap: 12px; }
 #ui-title { font-size: 13px; color: rgba(255,255,255,0.35); letter-spacing: 3px; }
 .mode-btn { font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.5); background: none; border: 0.5px solid rgba(255,255,255,0.3); padding: 4px 10px; cursor: pointer; letter-spacing: 1px; pointer-events: auto; }
 .mode-btn:hover { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.55); }
 #btn-stealth.active { color: rgba(100,255,180,0.9); border-color: rgba(100,255,180,0.4); }
-#btn-walk.active   { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.45); }
-#btn-run.active    { color: rgba(255,170,80,0.9);  border-color: rgba(255,170,80,0.4); }
+#btn-walk.active    { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.45); }
+#btn-run.active     { color: rgba(255,170,80,0.9);  border-color: rgba(255,170,80,0.4); }
+.instant-btn { font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.5); background: none; border: 0.5px solid rgba(255,255,255,0.3); padding: 4px 14px; cursor: pointer; letter-spacing: 1px; pointer-events: auto; transition: opacity 0.15s; }
+.instant-btn:hover:not(:disabled) { color: rgba(255,255,255,0.8); border-color: rgba(255,255,255,0.55); }
+.instant-btn:disabled { opacity: 0.2; cursor: default; }
 #msg { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font-family: monospace; font-size: 11px; color: rgba(255,255,255,0.25); letter-spacing: 1px; pointer-events: none; }
 #fs-btn { position: fixed; top: 10px; right: 16px; font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.2); background: none; border: 0.5px solid rgba(255,255,255,0.15); padding: 4px 8px; cursor: pointer; letter-spacing: 1px; }
 #fs-btn:hover { color: rgba(255,255,255,0.5); border-color: rgba(255,255,255,0.35); }
@@ -22,10 +27,16 @@ canvas { display: block; image-rendering: pixelated; border: 1px solid rgba(255,
 </head>
 <body>
 <div id="ui">
-  <span id="ui-title">DARK ECHO</span>
-  <button class="mode-btn" id="btn-stealth" onclick="setMode('stealth')">SIGILO</button>
-  <button class="mode-btn active" id="btn-walk" onclick="setMode('walk')">CAMINAR</button>
-  <button class="mode-btn" id="btn-run" onclick="setMode('run')">CORRER</button>
+  <div id="ui-top">
+    <span id="ui-title">DARK ECHO</span>
+    <button class="mode-btn" id="btn-stealth" onclick="setMode('stealth')">SIGILO</button>
+    <button class="mode-btn active" id="btn-walk" onclick="setMode('walk')">CAMINAR</button>
+    <button class="mode-btn" id="btn-run" onclick="setMode('run')">CORRER</button>
+  </div>
+  <div id="ui-actions">
+    <button class="instant-btn" id="btn-susurro" onclick="doSusurro()">SUSURRO</button>
+    <button class="instant-btn" id="btn-tos" onclick="doTos()">TOS</button>
+  </div>
 </div>
 <canvas id="c"></canvas>
 <div id="msg">CLICK PARA MOVER</div>
@@ -97,11 +108,30 @@ let gameOver = false, gameWon = false, lastTime = 0;
 let mouseX = -1, mouseY = -1;
 let targetX = -1, targetY = -1;
 let moveMode = 'walk', stepTimer = 0;
+let susurroCooldown = 0, tosCooldown = 0;
 
 function setMode(m) {
   moveMode = m;
   document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-' + m).classList.add('active');
+}
+function updateInstantBtns() {
+  const bs = document.getElementById('btn-susurro');
+  const bt = document.getElementById('btn-tos');
+  bs.disabled = susurroCooldown > 0;
+  bt.disabled = tosCooldown > 0;
+  bs.textContent = susurroCooldown > 0 ? `SUSURRO ${susurroCooldown.toFixed(1)}` : 'SUSURRO';
+  bt.textContent = tosCooldown > 0 ? `TOS ${tosCooldown.toFixed(1)}` : 'TOS';
+}
+function doSusurro() {
+  if(gameOver || gameWon || susurroCooldown > 0) return;
+  emitWave('susurro');
+  susurroCooldown = 0.8;
+}
+function doTos() {
+  if(gameOver || gameWon || tosCooldown > 0) return;
+  emitWave('tos');
+  tosCooldown = 4;
 }
 
 function cellWalkable(cx, cy) {
@@ -125,9 +155,11 @@ function emitEnemyWave(e, alerted) {
 }
 function emitWave(mode) {
   const cfg = {
-    stealth: {count:48, maxDist:CELL*4,  maxAge:0.8, loud:false},
-    walk:    {count:72, maxDist:CELL*7,  maxAge:1.2, loud:true},
-    run:     {count:90, maxDist:CELL*10, maxAge:1.5, loud:true},
+    stealth: {count:48, maxDist:CELL*4,   maxAge:0.8, loud:false},
+    walk:    {count:72, maxDist:CELL*7,   maxAge:1.2, loud:true},
+    run:     {count:90, maxDist:CELL*10,  maxAge:1.5, loud:true},
+    susurro: {count:36, maxDist:CELL*2.5, maxAge:0.6, loud:false},
+    tos:     {count:100,maxDist:CELL*12,  maxAge:1.8, loud:true},
   }[mode];
   const w = {x:player.x*CELL, y:player.y*CELL, rays:[], age:0, maxAge:cfg.maxAge, loud:cfg.loud};
   for(let i=0;i<cfg.count;i++) {
@@ -217,7 +249,9 @@ function reset() {
   enemies[2].x=4.5;enemies[2].y=9.5;enemies[2].alerted=false;enemies[2].alertTimer=0;
   enemies[2].waypointIdx=0;enemies[2].stepTimer=0;enemies[2].waves=[];
   targetX=-1;targetY=-1;
+  susurroCooldown=0;tosCooldown=0;
   setMode('walk');
+  updateInstantBtns();
 }
 
 function getCanvasCoords(ev) {
@@ -240,6 +274,8 @@ canvas.addEventListener('mouseleave', ()=>{ mouseX=-1; mouseY=-1; });
 
 function update(dt) {
   if(gameOver||gameWon) return;
+  if(susurroCooldown > 0) { susurroCooldown = Math.max(0, susurroCooldown - dt); updateInstantBtns(); }
+  if(tosCooldown > 0)     { tosCooldown     = Math.max(0, tosCooldown     - dt); updateInstantBtns(); }
   if(targetX>=0) {
     const dx=targetX-player.x, dy=targetY-player.y;
     const dist=Math.sqrt(dx*dx+dy*dy);
