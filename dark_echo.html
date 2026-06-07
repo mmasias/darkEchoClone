@@ -309,7 +309,7 @@ function update(dt) {
         stepTimer+=dt;
         const interval = moveMode==='stealth'?0.8:moveMode==='run'?0.2:0.35;
         if(stepTimer>=interval){emitWave(moveMode);stepTimer=0;}
-      }
+      } else { targetX=-1; targetY=-1; }
     } else { targetX=-1;targetY=-1; }
   }
   for(const w of waves){w.age+=dt;for(const r of w.rays)castRay(r,dt);}
