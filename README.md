@@ -89,6 +89,10 @@ requestAnimationFrame(loop)
         `-- overlays (game over / win)
 ```
 
-## Instrucciones de ejecución
+## Jugar en el navegador
+
+[https://mmasias.github.io/darkEchoClone/dark_echo.html](https://mmasias.github.io/darkEchoClone/dark_echo.html)
+
+## Ejecución local
 
 Abrir `dark_echo.html` directamente en navegador. Sin servidor, sin dependencias. F11 o botón `[ FULLSCREEN ]` para pantalla completa.
