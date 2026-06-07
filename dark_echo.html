@@ -8,16 +8,27 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; cursor: none; }
 canvas { display: block; image-rendering: pixelated; border: 1px solid rgba(255,255,255,0.5); }
-#ui { position: fixed; top: 12px; left: 0; right: 0; text-align: center; font-family: monospace; font-size: 13px; color: rgba(255,255,255,0.35); letter-spacing: 3px; pointer-events: none; }
+#ui { position: fixed; top: 10px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 20px; font-family: monospace; pointer-events: none; }
+#ui-title { font-size: 13px; color: rgba(255,255,255,0.35); letter-spacing: 3px; }
+.mode-btn { font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.25); background: none; border: 0.5px solid rgba(255,255,255,0.12); padding: 4px 10px; cursor: pointer; letter-spacing: 1px; pointer-events: auto; }
+.mode-btn:hover { color: rgba(255,255,255,0.55); border-color: rgba(255,255,255,0.3); }
+#btn-stealth.active { color: rgba(100,255,180,0.9); border-color: rgba(100,255,180,0.4); }
+#btn-walk.active   { color: rgba(255,255,255,0.9); border-color: rgba(255,255,255,0.45); }
+#btn-run.active    { color: rgba(255,170,80,0.9);  border-color: rgba(255,170,80,0.4); }
 #msg { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font-family: monospace; font-size: 11px; color: rgba(255,255,255,0.25); letter-spacing: 1px; pointer-events: none; }
 #fs-btn { position: fixed; top: 10px; right: 16px; font-family: monospace; font-size: 10px; color: rgba(255,255,255,0.2); background: none; border: 0.5px solid rgba(255,255,255,0.15); padding: 4px 8px; cursor: pointer; letter-spacing: 1px; }
 #fs-btn:hover { color: rgba(255,255,255,0.5); border-color: rgba(255,255,255,0.35); }
 </style>
 </head>
 <body>
-<div id="ui">DARK ECHO</div>
+<div id="ui">
+  <span id="ui-title">DARK ECHO</span>
+  <button class="mode-btn" id="btn-stealth" onclick="setMode('stealth')">SIGILO</button>
+  <button class="mode-btn active" id="btn-walk" onclick="setMode('walk')">CAMINAR</button>
+  <button class="mode-btn" id="btn-run" onclick="setMode('run')">CORRER</button>
+</div>
 <canvas id="c"></canvas>
-<div id="msg">CLICK PARA CAMINAR &nbsp;·&nbsp; DOBLE-CLICK PARA SIGILO</div>
+<div id="msg">CLICK PARA MOVER</div>
 <button id="fs-btn" onclick="toggleFS()">[ FULLSCREEN ]</button>
 <script>
 const canvas = document.getElementById('c');
@@ -85,7 +96,13 @@ const enemies = [
 let gameOver = false, gameWon = false, lastTime = 0;
 let mouseX = -1, mouseY = -1;
 let targetX = -1, targetY = -1;
-let sneakMode = false, stepTimer = 0;
+let moveMode = 'walk', stepTimer = 0;
+
+function setMode(m) {
+  moveMode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + m).classList.add('active');
+}
 
 function cellWalkable(cx, cy) {
   if(cx<0||cy<0||cy>=MAP.length||cx>=MAP[0].length) return false;
@@ -106,12 +123,16 @@ function emitEnemyWave(e, alerted) {
   }
   e.waves.push(w);
 }
-function emitWave(loud) {
-  const w = {x:player.x*CELL, y:player.y*CELL, rays:[], age:0, maxAge:loud?1.2:0.8, loud};
-  const count = loud ? 72 : 48;
-  for(let i=0;i<count;i++) {
-    const a = (i/count)*Math.PI*2;
-    w.rays.push({x:w.x,y:w.y,dx:Math.cos(a),dy:Math.sin(a),dist:0,maxDist:loud?CELL*7:CELL*4,bounced:false,dead:false,red:false});
+function emitWave(mode) {
+  const cfg = {
+    stealth: {count:48, maxDist:CELL*4,  maxAge:0.8, loud:false},
+    walk:    {count:72, maxDist:CELL*7,  maxAge:1.2, loud:true},
+    run:     {count:90, maxDist:CELL*10, maxAge:1.5, loud:true},
+  }[mode];
+  const w = {x:player.x*CELL, y:player.y*CELL, rays:[], age:0, maxAge:cfg.maxAge, loud:cfg.loud};
+  for(let i=0;i<cfg.count;i++) {
+    const a = (i/cfg.count)*Math.PI*2;
+    w.rays.push({x:w.x,y:w.y,dx:Math.cos(a),dy:Math.sin(a),dist:0,maxDist:cfg.maxDist,bounced:false,dead:false,red:false});
   }
   waves.push(w);
 }
@@ -196,6 +217,7 @@ function reset() {
   enemies[2].x=4.5;enemies[2].y=9.5;enemies[2].alerted=false;enemies[2].alertTimer=0;
   enemies[2].waypointIdx=0;enemies[2].stepTimer=0;enemies[2].waves=[];
   targetX=-1;targetY=-1;
+  setMode('walk');
 }
 
 function getCanvasCoords(ev) {
@@ -208,12 +230,7 @@ function getCanvasCoords(ev) {
 canvas.addEventListener('click', (ev) => {
   if(gameOver||gameWon){reset();return;}
   const [cx,cy] = getCanvasCoords(ev);
-  targetX=cx/CELL; targetY=cy/CELL; sneakMode=false;
-});
-canvas.addEventListener('dblclick', (ev) => {
-  if(gameOver||gameWon) return;
-  const [cx,cy] = getCanvasCoords(ev);
-  targetX=cx/CELL; targetY=cy/CELL; sneakMode=true;
+  targetX=cx/CELL; targetY=cy/CELL;
 });
 canvas.addEventListener('mousemove', (ev) => {
   const [cx,cy] = getCanvasCoords(ev);
@@ -227,12 +244,13 @@ function update(dt) {
     const dx=targetX-player.x, dy=targetY-player.y;
     const dist=Math.sqrt(dx*dx+dy*dy);
     if(dist>0.15) {
-      const spd=sneakMode?1.2:2.8;
+      const spd = moveMode==='stealth'?1.2:moveMode==='run'?4.5:2.8;
       const nx=player.x+(dx/dist)*spd*dt, ny=player.y+(dy/dist)*spd*dt;
       const moved=tryMove(player,nx,ny)||tryMove(player,player.x,ny)||tryMove(player,nx,player.y);
       if(moved){
         stepTimer+=dt;
-        if(stepTimer>=(sneakMode?0.8:0.35)){emitWave(!sneakMode);stepTimer=0;}
+        const interval = moveMode==='stealth'?0.8:moveMode==='run'?0.2:0.35;
+        if(stepTimer>=interval){emitWave(moveMode);stepTimer=0;}
       }
     } else { targetX=-1;targetY=-1; }
   }
