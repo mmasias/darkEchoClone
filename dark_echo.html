@@ -283,7 +283,7 @@ function reset() {
     enemies[i].waypointIdx=0; enemies[i].stepTimer=0; enemies[i].waves=[];
   }
   targetX=-1; targetY=-1;
-  susurroCooldown=0; tosCooldown=0; stoneCooldown=0; slideTimer=0;
+  susurroCooldown=0; tosCooldown=0; stoneCooldown=0; stepTimer=0; slideTimer=0;
   playerAngle=0; stone=null;
   updateCamera();
   setMode('walk');
@@ -332,11 +332,13 @@ function update(dt) {
     if(dist>0.15) {
       const spd = moveMode==='stealth'?1.2:moveMode==='run'?4.5:2.8;
       const nx=player.x+(dx/dist)*spd*dt, ny=player.y+(dy/dist)*spd*dt;
+      const px0=player.x, py0=player.y;
       const directMoved=tryMove(player,nx,ny);
       const moved=directMoved||tryMove(player,player.x,ny)||tryMove(player,nx,player.y);
       if(moved) {
-        if(directMoved) {
-          playerAngle=Math.atan2(dy,dx);
+        const progress=Math.hypot(player.x-px0, player.y-py0);
+        if(progress > spd*dt*0.5) {
+          playerAngle=Math.atan2(player.y-py0, player.x-px0);
           slideTimer=0;
           stepTimer+=dt;
           const interval=moveMode==='stealth'?0.8:moveMode==='run'?0.2:0.35;
